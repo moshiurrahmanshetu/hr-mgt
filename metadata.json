@@ -1,0 +1,6 @@
+{
+  "name": "HRM PHP Foundation",
+  "description": "A production-ready Core PHP & MySQL Human Resource Management System foundation featuring a modular MVC structure, secure authentication, dynamic dark/light dashboard, and PDO connection system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
