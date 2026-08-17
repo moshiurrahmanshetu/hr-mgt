@@ -130,3 +130,185 @@ function get_lockout_time($email) {
     
     return max(0, $remaining);
 }
+
+/**
+ * Generate pagination HTML
+ */
+function get_pagination($current_page, $total_pages, $base_url, $query_params = []) {
+    if ($total_pages <= 1) {
+        return '';
+    }
+    
+    $html = '<nav aria-label="Page navigation"><ul class="pagination">';
+    
+    // Previous button
+    if ($current_page > 1) {
+        $params = array_merge($query_params, ['page' => $current_page - 1]);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?' . http_build_query($params) . '">Previous</a></li>';
+    } else {
+        $html .= '<li class="page-item disabled"><span class="page-link">Previous</span></li>';
+    }
+    
+    // Page numbers
+    $start_page = max(1, $current_page - 2);
+    $end_page = min($total_pages, $current_page + 2);
+    
+    if ($start_page > 1) {
+        $params = array_merge($query_params, ['page' => 1]);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?' . http_build_query($params) . '">1</a></li>';
+        if ($start_page > 2) {
+            $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+    }
+    
+    for ($i = $start_page; $i <= $end_page; $i++) {
+        $params = array_merge($query_params, ['page' => $i]);
+        if ($i == $current_page) {
+            $html .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
+        } else {
+            $html .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?' . http_build_query($params) . '">' . $i . '</a></li>';
+        }
+    }
+    
+    if ($end_page < $total_pages) {
+        if ($end_page < $total_pages - 1) {
+            $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+        $params = array_merge($query_params, ['page' => $total_pages]);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?' . http_build_query($params) . '">' . $total_pages . '</a></li>';
+    }
+    
+    // Next button
+    if ($current_page < $total_pages) {
+        $params = array_merge($query_params, ['page' => $current_page + 1]);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?' . http_build_query($params) . '">Next</a></li>';
+    } else {
+        $html .= '<li class="page-item disabled"><span class="page-link">Next</span></li>';
+    }
+    
+    $html .= '</ul></nav>';
+    
+    return $html;
+}
+
+/**
+ * Get status badge HTML
+ */
+function get_status_badge($status) {
+    $badge_class = $status === 'active' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary';
+    return '<span class="badge ' . $badge_class . '">' . ucfirst($status) . '</span>';
+}
+
+/**
+ * Truncate text to specified length
+ */
+function truncate_text($text, $length = 50, $suffix = '...') {
+    if (strlen($text) <= $length) {
+        return $text;
+    }
+    return substr($text, 0, $length) . $suffix;
+}
+
+/**
+ * Toggle status in database
+ */
+function toggle_status($table, $id, $current_status) {
+    global $pdo;
+    
+    $new_status = $current_status === 'active' ? 'inactive' : 'active';
+    
+    try {
+        $stmt = $pdo->prepare("UPDATE $table SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt->execute([$new_status, $id]);
+        return $new_status;
+    } catch (PDOException $e) {
+        error_log("Status toggle error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Handle avatar upload (reusable function)
+ * Returns new filename on success, error message on failure
+ */
+function handle_avatar_upload($file, $old_avatar = null) {
+    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
+        return ['success' => false, 'error' => 'Please select a file to upload.'];
+    }
+    
+    // Validate file type
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($mime_type, ALLOWED_AVATAR_TYPES)) {
+        return ['success' => false, 'error' => 'Invalid file type. Please upload a JPG, PNG, or WebP image.'];
+    }
+    
+    if ($file['size'] > MAX_AVATAR_SIZE) {
+        return ['success' => false, 'error' => 'File size exceeds the maximum limit of 2MB.'];
+    }
+    
+    try {
+        // Delete old avatar if exists
+        if ($old_avatar) {
+            $old_avatar_path = __DIR__ . '/../uploads/avatars/' . $old_avatar;
+            if (file_exists($old_avatar_path)) {
+                unlink($old_avatar_path);
+            }
+        }
+        
+        // Generate unique filename
+        $new_filename = generate_unique_filename($file['name']);
+        $upload_path = __DIR__ . '/../uploads/avatars/' . $new_filename;
+        
+        // Move uploaded file
+        if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+            return ['success' => true, 'filename' => $new_filename];
+        } else {
+            return ['success' => false, 'error' => 'Failed to upload file. Please try again.'];
+        }
+    } catch (Exception $e) {
+        error_log("Avatar upload error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'An error occurred while uploading your avatar.'];
+    }
+}
+
+/**
+ * Generate employee code (EMP-000001 format)
+ * Uses a lock approach to prevent race conditions
+ */
+function generate_employee_code() {
+    global $pdo;
+    
+    try {
+        // Lock the table to prevent race conditions
+        $pdo->exec("LOCK TABLES employees WRITE");
+        
+        // Get the maximum existing employee code
+        $stmt = $pdo->query("SELECT MAX(employee_code) as max_code FROM employees WHERE deleted_at IS NULL");
+        $result = $stmt->fetch();
+        
+        $max_code = $result['max_code'] ?? 'EMP-000000';
+        $max_number = intval(substr($max_code, -6));
+        $new_number = $max_number + 1;
+        
+        // Format as EMP-000001
+        $new_code = 'EMP-' . str_pad($new_number, 6, '0', STR_PAD_LEFT);
+        
+        // Unlock the table
+        $pdo->exec("UNLOCK TABLES");
+        
+        return $new_code;
+    } catch (PDOException $e) {
+        // Make sure to unlock even on error
+        try {
+            $pdo->exec("UNLOCK TABLES");
+        } catch (PDOException $unlock_error) {
+            error_log("Unlock error: " . $unlock_error->getMessage());
+        }
+        
+        error_log("Employee code generation error: " . $e->getMessage());
+        return false;
+    }
+}

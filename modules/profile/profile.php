@@ -5,7 +5,6 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/csrf.php';
-require_once __DIR__ . '/../../templates/header.php';
 
 require_login();
 
@@ -110,65 +109,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $avatar_message = 'Invalid form submission. Please try again.';
         $avatar_message_type = 'danger';
     } else {
-        if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
-            $avatar_message = 'Please select a file to upload.';
-            $avatar_message_type = 'danger';
-        } else {
-            $file = $_FILES['avatar'];
-            
-            // Validate file type
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime_type = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-            
-            if (!in_array($mime_type, ALLOWED_AVATAR_TYPES)) {
-                $avatar_message = 'Invalid file type. Please upload a JPG, PNG, or WebP image.';
+        $upload_result = handle_avatar_upload($_FILES['avatar'] ?? null, $current_user['avatar']);
+        
+        if ($upload_result['success']) {
+            try {
+                // Update database
+                $stmt = $pdo->prepare("UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$upload_result['filename'], $_SESSION['user_id']]);
+                
+                // Update session
+                $_SESSION['avatar'] = $upload_result['filename'];
+                
+                // Log activity
+                log_activity($_SESSION['user_id'], 'avatar_change', 'User changed profile avatar');
+                
+                // Refresh user data and avatar URL
+                $current_user = get_logged_in_user();
+                $avatar_url = get_avatar_url($current_user['avatar']);
+                
+                $avatar_message = 'Avatar updated successfully!';
+                $avatar_message_type = 'success';
+            } catch (PDOException $e) {
+                error_log("Avatar database update error: " . $e->getMessage());
+                $avatar_message = 'An error occurred while updating your avatar.';
                 $avatar_message_type = 'danger';
-            } elseif ($file['size'] > MAX_AVATAR_SIZE) {
-                $avatar_message = 'File size exceeds the maximum limit of 2MB.';
-                $avatar_message_type = 'danger';
-            } else {
-                try {
-                    // Delete old avatar if exists
-                    if ($current_user['avatar']) {
-                        $old_avatar_path = __DIR__ . '/../../uploads/avatars/' . $current_user['avatar'];
-                        if (file_exists($old_avatar_path)) {
-                            unlink($old_avatar_path);
-                        }
-                    }
-                    
-                    // Generate unique filename
-                    $new_filename = generate_unique_filename($file['name']);
-                    $upload_path = __DIR__ . '/../../uploads/avatars/' . $new_filename;
-                    
-                    // Move uploaded file
-                    if (move_uploaded_file($file['tmp_name'], $upload_path)) {
-                        // Update database
-                        $stmt = $pdo->prepare("UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                        $stmt->execute([$new_filename, $_SESSION['user_id']]);
-                        
-                        // Update session
-                        $_SESSION['avatar'] = $new_filename;
-                        
-                        // Log activity
-                        log_activity($_SESSION['user_id'], 'avatar_change', 'User changed profile avatar');
-                        
-                        // Refresh user data and avatar URL
-                        $current_user = get_logged_in_user();
-                        $avatar_url = get_avatar_url($current_user['avatar']);
-                        
-                        $avatar_message = 'Avatar updated successfully!';
-                        $avatar_message_type = 'success';
-                    } else {
-                        $avatar_message = 'Failed to upload file. Please try again.';
-                        $avatar_message_type = 'danger';
-                    }
-                } catch (PDOException $e) {
-                    error_log("Avatar upload error: " . $e->getMessage());
-                    $avatar_message = 'An error occurred while uploading your avatar.';
-                    $avatar_message_type = 'danger';
-                }
             }
+        } else {
+            $avatar_message = $upload_result['error'];
+            $avatar_message_type = 'danger';
         }
     }
 }
@@ -214,6 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 }
+
+// Only include templates after all form processing is done
+require_once __DIR__ . '/../../templates/header.php';
 ?>
 
 <div class="row mb-4">

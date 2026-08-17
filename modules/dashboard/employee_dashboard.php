@@ -1,7 +1,28 @@
 <?php
 $page_title = 'Employee Dashboard';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../templates/header.php';
+
 require_role('employee');
+
+// Get employee data for the logged-in user
+$employee_data = null;
+try {
+    $stmt = $pdo->prepare("
+        SELECT e.*, d.name as department_name, des.title as designation_name 
+        FROM employees e 
+        JOIN departments d ON e.department_id = d.id 
+        JOIN designations des ON e.designation_id = des.id 
+        WHERE e.user_id = ? AND e.deleted_at IS NULL
+    ");
+    $stmt->execute([$_SESSION['user_id']]);
+    $employee_data = $stmt->fetch();
+} catch (PDOException $e) {
+    error_log("Employee data fetch error: " . $e->getMessage());
+}
 ?>
 
 <div class="row mb-4">
@@ -23,6 +44,16 @@ require_role('employee');
             <div class="stat-card-content">
                 <h3 class="stat-card-value"><?php echo htmlspecialchars($current_user['name']); ?></h3>
                 <p class="stat-card-label">Profile Summary</p>
+                <?php if ($employee_data): ?>
+                    <small class="text-muted">
+                        <?php echo htmlspecialchars($employee_data['employee_code']); ?><br>
+                        <?php echo htmlspecialchars($employee_data['department_name']); ?><br>
+                        <?php echo htmlspecialchars($employee_data['designation_name']); ?><br>
+                        Joined: <?php echo date('M d, Y', strtotime($employee_data['joining_date'])); ?>
+                    </small>
+                <?php else: ?>
+                    <small class="text-muted">Profile details not available</small>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -96,7 +127,7 @@ require_role('employee');
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">Not Assigned</h3>
+                <h3 class="stat-card-value"><?php echo $employee_data ? htmlspecialchars($employee_data['department_name']) : 'Not Assigned'; ?></h3>
                 <p class="stat-card-label">Department</p>
             </div>
         </div>
@@ -110,7 +141,7 @@ require_role('employee');
                 <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
             </svg>
             <div>
-                <strong>Welcome to the HR Management System!</strong> This is your employee dashboard. The information above will be populated with your real data in the next phases of development.
+                <strong>Welcome to the HR Management System!</strong> Your profile summary is now available. Attendance, leave, and payroll features will be added in future phases.
             </div>
         </div>
     </div>

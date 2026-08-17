@@ -1,4 +1,11 @@
 <?php
+// Output buffering as safety net for header() calls
+ob_start();
+
+// Enable full error reporting for development
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // App-wide configuration constants
 
 // Base URL - adjust this to match your server setup

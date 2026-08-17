@@ -1,7 +1,40 @@
 <?php
 $page_title = 'Admin Dashboard';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../templates/header.php';
+
 require_role('admin');
+
+// Get real statistics
+try {
+    // Total employees (excluding soft-deleted)
+    $total_employees_stmt = $pdo->query("SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL");
+    $total_employees = $total_employees_stmt->fetchColumn();
+    
+    // Active employees (deleted_at IS NULL AND employment_status = 'active' AND user account is active)
+    $active_employees_stmt = $pdo->query("
+        SELECT COUNT(*) 
+        FROM employees e 
+        JOIN users u ON e.user_id = u.id 
+        WHERE e.deleted_at IS NULL 
+        AND e.employment_status = 'active' 
+        AND u.status = 'active'
+    ");
+    $active_employees = $active_employees_stmt->fetchColumn();
+    
+    // Total departments
+    $departments_stmt = $pdo->query("SELECT COUNT(*) FROM departments WHERE status = 'active'");
+    $departments = $departments_stmt->fetchColumn();
+    
+} catch (PDOException $e) {
+    error_log("Dashboard stats error: " . $e->getMessage());
+    $total_employees = 0;
+    $active_employees = 0;
+    $departments = 0;
+}
 ?>
 
 <div class="row mb-4">
@@ -21,7 +54,7 @@ require_role('admin');
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
+                <h3 class="stat-card-value"><?php echo $total_employees; ?></h3>
                 <p class="stat-card-label">Total Employees</p>
             </div>
         </div>
@@ -36,7 +69,7 @@ require_role('admin');
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
+                <h3 class="stat-card-value"><?php echo $active_employees; ?></h3>
                 <p class="stat-card-label">Active Employees</p>
             </div>
         </div>
@@ -50,7 +83,7 @@ require_role('admin');
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
+                <h3 class="stat-card-value"><?php echo $departments; ?></h3>
                 <p class="stat-card-label">Departments</p>
             </div>
         </div>
