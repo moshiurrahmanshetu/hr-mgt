@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Exec(Get-ChildItem)"
+      "Exec(ls)",
+      "Exec(mkdir hr-system)",
+      "Exec(mkdir)",
+      "Exec(php)",
+      "Exec(mysql)",
+      "Exec(dir)"
     ]
   }
 }

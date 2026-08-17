@@ -1,0 +1,31 @@
+# Block direct access to sensitive directories
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Block access to config directory
+    RewriteRule ^config/ - [F,L]
+    
+    # Block access to includes directory
+    RewriteRule ^includes/ - [F,L]
+    
+    # Block access to database directory
+    RewriteRule ^database/ - [F,L]
+    
+    # Block access to .htaccess file itself
+    <Files .htaccess>
+        Require all denied
+    </Files>
+    
+    # Block access to sensitive file types
+    <FilesMatch "\.(sql|log|ini|conf)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Prevent file listing
+<IfModule mod_autoindex.c>
+    IndexIgnore *
+</IfModule>

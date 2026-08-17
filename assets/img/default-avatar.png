@@ -1,0 +1,1 @@
+This is a placeholder file for the default avatar. In a production environment, this should be replaced with an actual PNG image file. For now, the system will use a fallback approach in the get_avatar_url() function.
