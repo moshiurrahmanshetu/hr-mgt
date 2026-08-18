@@ -23,6 +23,22 @@ try {
 } catch (PDOException $e) {
     error_log("Employee data fetch error: " . $e->getMessage());
 }
+
+// Get today's attendance status
+$today_attendance = null;
+if ($employee_data) {
+    try {
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare("
+            SELECT * FROM attendance 
+            WHERE employee_id = ? AND date = ?
+        ");
+        $stmt->execute([$employee_data['id'], $today]);
+        $today_attendance = $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log("Today's attendance fetch error: " . $e->getMessage());
+    }
+}
 ?>
 
 <div class="row mb-4">
@@ -67,7 +83,15 @@ try {
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">Not Recorded</h3>
+                <?php if (!$today_attendance): ?>
+                    <h3 class="stat-card-value">Not Checked In</h3>
+                <?php elseif ($today_attendance['check_out']): ?>
+                    <h3 class="stat-card-value">Checked Out</h3>
+                    <small class="text-muted"><?php echo date('h:i A', strtotime($today_attendance['check_out'])); ?></small>
+                <?php else: ?>
+                    <h3 class="stat-card-value"><?php echo ucfirst($today_attendance['status']); ?></h3>
+                    <small class="text-muted"><?php echo date('h:i A', strtotime($today_attendance['check_in'])); ?></small>
+                <?php endif; ?>
                 <p class="stat-card-label">Today's Attendance</p>
             </div>
         </div>

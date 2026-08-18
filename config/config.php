@@ -28,6 +28,9 @@ define('CSRF_TOKEN_NAME', 'csrf_token');
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOGIN_LOCKOUT_TIME', 300); // 5 minutes in seconds
 
+// Attendance settings
+define('OFFICE_START_TIME', '09:30:00'); // Cutoff time for late status (24-hour format)
+
 // File upload settings
 define('MAX_AVATAR_SIZE', 2 * 1024 * 1024); // 2MB in bytes
 define('ALLOWED_AVATAR_TYPES', ['image/jpeg', 'image/png', 'image/webp']);

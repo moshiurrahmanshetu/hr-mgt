@@ -29,11 +29,34 @@ try {
     $departments_stmt = $pdo->query("SELECT COUNT(*) FROM departments WHERE status = 'active'");
     $departments = $departments_stmt->fetchColumn();
     
+    // Today's attendance stats
+    $today = date('Y-m-d');
+    
+    // Today's present (present + late)
+    $today_present_stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM attendance 
+        WHERE date = ? AND status IN ('present', 'late')
+    ");
+    $today_present_stmt->execute([$today]);
+    $today_present = $today_present_stmt->fetchColumn();
+    
+    // Today's absent (actual 'absent' status only - not counting no-record employees)
+    $today_absent_stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM attendance 
+        WHERE date = ? AND status = 'absent'
+    ");
+    $today_absent_stmt->execute([$today]);
+    $today_absent = $today_absent_stmt->fetchColumn();
+    
 } catch (PDOException $e) {
     error_log("Dashboard stats error: " . $e->getMessage());
     $total_employees = 0;
     $active_employees = 0;
     $departments = 0;
+    $today_present = 0;
+    $today_absent = 0;
 }
 ?>
 
@@ -98,7 +121,7 @@ try {
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
+                <h3 class="stat-card-value"><?php echo $today_present; ?></h3>
                 <p class="stat-card-label">Today's Present</p>
             </div>
         </div>
@@ -115,7 +138,7 @@ try {
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
+                <h3 class="stat-card-value"><?php echo $today_absent; ?></h3>
                 <p class="stat-card-label">Today's Absent</p>
             </div>
         </div>
