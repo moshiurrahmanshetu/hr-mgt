@@ -312,3 +312,72 @@ function generate_employee_code() {
         return false;
     }
 }
+
+/**
+ * Calculate leave balance for an employee and leave type
+ * Returns array with 'used' and 'remaining' days for the current calendar year
+ */
+function calculate_leave_balance($employee_id, $leave_type_id) {
+    global $pdo;
+    
+    try {
+        // Get max days per year for this leave type
+        $stmt = $pdo->prepare("SELECT max_days_per_year FROM leave_types WHERE id = ?");
+        $stmt->execute([$leave_type_id]);
+        $max_days = $stmt->fetchColumn();
+        
+        if (!$max_days) {
+            return ['used' => 0, 'remaining' => 0];
+        }
+        
+        // Calculate used days for this year (approved requests only)
+        $current_year = date('Y');
+        $stmt = $pdo->prepare("
+            SELECT SUM(total_days) as used_days 
+            FROM leave_requests 
+            WHERE employee_id = ? 
+            AND leave_type_id = ? 
+            AND status = 'approved' 
+            AND YEAR(start_date) = ?
+        ");
+        $stmt->execute([$employee_id, $leave_type_id, $current_year]);
+        $used_days = $stmt->fetchColumn() ?: 0;
+        
+        $remaining = max(0, $max_days - $used_days);
+        
+        return ['used' => $used_days, 'remaining' => $remaining, 'max' => $max_days];
+    } catch (PDOException $e) {
+        error_log("Leave balance calculation error: " . $e->getMessage());
+        return ['used' => 0, 'remaining' => 0, 'max' => 0];
+    }
+}
+
+/**
+ * Check for overlapping leave requests for an employee
+ * Returns true if overlapping dates exist, false otherwise
+ */
+function check_leave_overlap($employee_id, $start_date, $end_date, $exclude_request_id = null) {
+    global $pdo;
+    
+    try {
+        $where = "employee_id = ? AND status IN ('pending', 'approved') AND (
+            (start_date <= ? AND end_date >= ?) OR 
+            (start_date <= ? AND end_date >= ?)
+        )";
+        $params = [$employee_id, $end_date, $start_date, $start_date, $end_date];
+        
+        if ($exclude_request_id) {
+            $where .= " AND id != ?";
+            $params[] = $exclude_request_id;
+        }
+        
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM leave_requests WHERE $where");
+        $stmt->execute($params);
+        $count = $stmt->fetchColumn();
+        
+        return $count > 0;
+    } catch (PDOException $e) {
+        error_log("Leave overlap check error: " . $e->getMessage());
+        return false; // Fail open to avoid blocking on errors
+    }
+}

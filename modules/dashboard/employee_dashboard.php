@@ -39,6 +39,37 @@ if ($employee_data) {
         error_log("Today's attendance fetch error: " . $e->getMessage());
     }
 }
+
+// Get leave balance summary
+$total_remaining_days = 0;
+if ($employee_data) {
+    try {
+        $leave_types_stmt = $pdo->query("SELECT id FROM leave_types WHERE status = 'active'");
+        $leave_types = $leave_types_stmt->fetchAll();
+        
+        foreach ($leave_types as $type) {
+            $balance = calculate_leave_balance($employee_data['id'], $type['id']);
+            $total_remaining_days += $balance['remaining'];
+        }
+    } catch (PDOException $e) {
+        error_log("Leave balance summary error: " . $e->getMessage());
+    }
+}
+
+// Get pending leave requests count
+$pending_leave_count = 0;
+if ($employee_data) {
+    try {
+        $pending_stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM leave_requests 
+            WHERE employee_id = ? AND status = 'pending'
+        ");
+        $pending_stmt->execute([$employee_data['id']]);
+        $pending_leave_count = $pending_stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log("Pending leave count error: " . $e->getMessage());
+    }
+}
 ?>
 
 <div class="row mb-4">
@@ -106,8 +137,11 @@ if ($employee_data) {
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0 days</h3>
+                <h3 class="stat-card-value"><?php echo $total_remaining_days; ?> days</h3>
                 <p class="stat-card-label">Leave Balance</p>
+                <a href="<?php echo BASE_URL; ?>/modules/leave/apply.php" class="btn btn-sm btn-outline-primary mt-2">
+                    <i class="bi bi-plus-lg me-1"></i>Apply
+                </a>
             </div>
         </div>
     </div>
@@ -115,13 +149,14 @@ if ($employee_data) {
     <div class="col-md-6 col-lg-3">
         <div class="stat-card">
             <div class="stat-card-icon bg-warning bg-opacity-10 text-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
-                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.79a6.99 6.99 0 0 0-.653-.796l.79-.616c.347.445.653.938.89 1.483l-.927.529zm.744 1.352a7.08 7.08 0 0 0-.214-.468l.893-.45a7.976 7.976 0 0 1 .45 1.082l-.95.313a7.023 7.023 0 0 0-.179-.477zm.03 1.484a6.977 6.977 0 0 0 .087-.51l.983.165c-.075.548-.187 1.08-.335 1.593l-.935-.262c.101-.384.17-.78.2-1.186zm.083 1.262a7.07 7.07 0 0 0-.008-.398l.996-.063a8.008 8.008 0 0 1 .046.655l-.998.072c-.014-.192-.026-.384-.034-.566zM16 8a8 8 0 1 1-16 0A8 8 0 0 1 16 8zM8 4.5a.5.5 0 0 0-1 0v3.363l-1.429 2.38a.5.5 0 1 0 .858.515L8 8.309V4.5z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-calendar3" viewBox="0 0 16 16">
+                    <path d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zM1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857V3.857z"/>
+                    <path d="M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
                 </svg>
             </div>
             <div class="stat-card-content">
-                <h3 class="stat-card-value">0</h3>
-                <p class="stat-card-label">Pending Requests</p>
+                <h3 class="stat-card-value"><?php echo $pending_leave_count; ?></h3>
+                <p class="stat-card-label">Pending Leaves</p>
             </div>
         </div>
     </div>
