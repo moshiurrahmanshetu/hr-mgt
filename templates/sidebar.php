@@ -1,3 +1,20 @@
+<?php
+global $pdo;
+
+// Get pending leave count for admin badge
+$pending_leave_count = 0;
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+    try {
+        $count_stmt = $pdo->prepare("SELECT COUNT(*) FROM leave_requests WHERE status = 'pending'");
+        $count_stmt->execute();
+        $pending_leave_count = $count_stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log("Pending leave count error: " . $e->getMessage());
+        $pending_leave_count = 0;
+    }
+}
+?>
+
 <div class="bg-dark" id="sidebar-wrapper">
     <div class="sidebar-heading px-3 py-3">
         <div class="d-flex align-items-center">
@@ -9,7 +26,7 @@
             <span class="sidebar-brand">HR System</span>
         </div>
     </div>
-    
+
     <div class="list-group list-group-flush">
         <a href="<?php echo BASE_URL; ?>/modules/dashboard/<?php echo $_SESSION['role']; ?>_dashboard.php" 
            class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], $_SESSION['role'] . '_dashboard.php') !== false ? 'active' : ''; ?>">
@@ -64,6 +81,9 @@
                class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'leave') !== false ? 'active' : ''; ?>">
                 <i class="bi bi-calendar-x me-2"></i>
                 Leave Requests
+                <?php if ($pending_leave_count > 0): ?>
+                    <span class="badge bg-info text-dark ms-auto"><?php echo $pending_leave_count; ?></span>
+                <?php endif; ?>
             </a>
         <?php else: ?>
             <a href="<?php echo BASE_URL; ?>/modules/leave/my_requests.php" 

@@ -115,6 +115,21 @@ function load_user_permissions($user_id, $role_id) {
  * Check if current user has a specific permission
  * This checks against the session-cached permissions array loaded during login
  * Permission changes take effect on next login (simple, safe approach)
+ * 
+ * USAGE INSTRUCTIONS:
+ * To add permission checks to other modules in future phases:
+ * 1. Add a new permission to the permissions table (e.g., 'employees.view')
+ * 2. Assign it to roles via the role_permissions table
+ * 3. In your module files, add this check after require_role():
+ *    if (!has_permission('employees.view')) {
+ *        http_response_code(403);
+ *        // render 403 page or redirect
+ *        exit;
+ *    }
+ * 
+ * The permission system is layered ON TOP of the existing require_role() checks.
+ * Don't remove require_role() - keep it as the coarse guard, use has_permission()
+ * for fine-grained control within a role.
  */
 function has_permission($permission_name) {
     if (!isset($_SESSION['permissions'])) {
