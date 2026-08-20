@@ -50,7 +50,7 @@ This will automatically redirect you to the login page.
 ## Default Login Credentials
 
 - **Email:** admin@hrsystem.com
-- **Password:** Admin@123
+- **Password:** 123456
 
 ## Features Implemented
 
