@@ -61,6 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['role'] = $user['role_name'];
                             $_SESSION['avatar'] = $user['avatar'];
                             
+                            // Load permissions into session cache
+                            load_user_permissions($user['id'], $user['role_id']);
+                            
+                            // Update last_login timestamp
+                            $update_stmt = $pdo->prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?");
+                            $update_stmt->execute([$user['id']]);
+                            
                             // Clear login attempts
                             clear_login_attempts($email);
                             

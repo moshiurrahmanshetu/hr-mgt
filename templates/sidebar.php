@@ -40,9 +40,7 @@
             
             <a href="<?php echo BASE_URL; ?>/modules/leave-types/list.php" 
                class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'leave-types') !== false ? 'active' : ''; ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-collection me-2" viewBox="0 0 16 16">
-                    <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm2-2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm6 6a.5.5 0 0 1 0-1h1a.5.5 0 0 1 0 1h-1zm-5 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm2-2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm0-3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm2-2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm0-3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm3 11a.5.5 0 0 1 0-1h4a.5.5 0 0 1 0 1h-4zm-7-8a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/>
-                </svg>
+                <i class="bi bi-collection me-2"></i>
                 Leave Types
             </a>
         <?php endif; ?>
@@ -77,6 +75,28 @@
                class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'apply.php') !== false ? 'active' : ''; ?>">
                 <i class="bi bi-plus-lg me-2"></i>
                 Apply for Leave
+            </a>
+        <?php endif; ?>
+        
+        <?php if ($_SESSION['role'] === 'admin'): ?>
+            <div class="list-group-item list-group-item-action disabled bg-secondary text-white small">
+                <i class="bi bi-gear me-2"></i>
+                Administration
+            </div>
+            <a href="<?php echo BASE_URL; ?>/modules/users/list.php" 
+               class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'users') !== false ? 'active' : ''; ?>">
+                <i class="bi bi-person-gear me-2"></i>
+                Users
+            </a>
+            <a href="<?php echo BASE_URL; ?>/modules/roles/list.php" 
+               class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'roles') !== false ? 'active' : ''; ?>">
+                <i class="bi bi-shield-lock me-2"></i>
+                Roles
+            </a>
+            <a href="<?php echo BASE_URL; ?>/modules/permissions/list.php" 
+               class="list-group-item list-group-item-action <?php echo strpos($_SERVER['PHP_SELF'], 'permissions') !== false ? 'active' : ''; ?>">
+                <i class="bi bi-key me-2"></i>
+                Permissions
             </a>
         <?php endif; ?>
         
